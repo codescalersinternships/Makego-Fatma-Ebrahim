@@ -22,7 +22,24 @@ func getMakefile() (string, error) {
 
 }
 
-func Parse() ([] Target,error) {
+func targetArrayToMap(targets []Target) map[string]Target {
+	target_map := make(map[string]Target)
+	for _, target := range targets {
+		old_target, ok := target_map[target.Name] 
+		if ok {
+			target_map[target.Name]= Target {
+				Name: old_target.Name,
+				Dependencies: append(old_target.Dependencies, target.Dependencies...),
+				Commands: target.Commands,
+			}
+		} else {
+			target_map[target.Name]= target
+		}
+	}
+	return target_map
+}
+
+func Parse() (map[string]Target,error) {
 	filename, err := getMakefile()
 	if err != nil {
 		return nil,err
@@ -40,7 +57,7 @@ func Parse() ([] Target,error) {
 	for i, line := range lines {
 		if line != "" {
 			if !strings.HasPrefix(line, "\t") && strings.Contains(line, ":") {
-				fmt.Println("is target:", line)
+				// fmt.Println("is target:", line)
 				targetDetected = true
 				targetName := strings.TrimSpace(line[:strings.Index(line, ":")])
 				dependencies := strings.TrimSpace(line[strings.Index(line, ":")+1:])
@@ -52,18 +69,19 @@ func Parse() ([] Target,error) {
 				continue
 			}
 			if strings.HasPrefix(line, "\t") && targetDetected {
-				fmt.Println("is command:", line)
+				// fmt.Println("is command:", line)
 				target.Commands = append(target.Commands, line[1:])
 				continue
 			}
 			if !strings.HasPrefix(line, "\t") && !strings.Contains(line, ":") {
-				fmt.Println("is error:", line)
+				// fmt.Println("is error:", line)
 				return nil,fmt.Errorf("syntax error in line: %d", i+1)
 			}
 		}
 	}
 
 	targets = append(targets, target)
-	return targets,nil
+	target_map := targetArrayToMap(targets)
+	return target_map,nil
 
 }

@@ -7,9 +7,8 @@ import (
 )
 
 func main() {
-	targets, err := makego.Parse()
+	err := makego.Make()
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Printf("%+v \n",targets)
 }
