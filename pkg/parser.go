@@ -1,10 +1,10 @@
 package makego
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"strings"
-	"flag"
 )
 
 type Target struct {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 func sortDependencies(target Target, alltargets map[string]Target, visited map[string]bool) ([]string, error) {
@@ -57,31 +58,54 @@ func getDependencies(targets map[string]Target) (map[string][]string, error) {
 	return dependency_map, err
 }
 
-func getDefaultTarget(targets map[string]Target) (string, error) {
+func getDefaultTarget(targets map[string]Target) ([]string, error) {
+	cliTargets := make([]string, 0)
 	flag.Parse()
-	targetName := flag.Arg(0)
-	if targetName == "" {
-		targetName = "default"
+	for arg := range flag.Args() {
+		targetName := flag.Arg(arg)
+		_, ok := targets[targetName]
+		if !ok {
+			return nil, fmt.Errorf("target '%s' not found", targetName)
+		}
+		cliTargets = append(cliTargets, targetName)
 	}
-	_, ok := targets[targetName]
-	if !ok {
-		return "", fmt.Errorf("target '%s' not found", targetName)
+	if len(cliTargets) == 0 {
+		cliTargets = append(cliTargets, "default")
 	}
-	return targetName, nil
+	return cliTargets, nil
 }
 
-func executeTarget(targets map[string]Target, dependencies []string) error {
+func executeTarget(targets map[string]Target, dependencies []string, executed map[string]bool, mu *sync.Mutex) error {
 	for _, dep := range dependencies {
-
+		mu.Lock()
+		_, ok := executed[dep]
+		if ok {
+			mu.Unlock()
+			continue
+		}
+		executed[dep] = true
 		for _, command := range targets[dep].Commands {
 			fmt.Println(command)
 			cmd := exec.Command("sh", "-c", command)
 			err := cmd.Run()
 			if err != nil {
-				return fmt.Errorf("error in command: '%s' in target: '%s' with message: %v", command,dep, err)
+				return fmt.Errorf("error in command: '%s' in target: '%s' with message: %v", command, dep, err)
 			}
 		}
+		mu.Unlock()
+
 	}
+	return nil
+}
+
+func executeTargetsConcurrently(targets map[string]Target, cliTargets []string, dependencies map[string][]string) error {
+	wg := sync.WaitGroup{}
+	executed := make(map[string]bool)
+	mu := &sync.Mutex{}
+	for _, cliTarget := range cliTargets {
+		wg.Go(func() { executeTarget(targets, dependencies[cliTarget], executed, mu) })
+	}
+	wg.Wait()
 	return nil
 }
 
@@ -103,13 +127,13 @@ func Make() error {
 	}
 	fmt.Printf("%+v\n", dep_map)
 
-	targetName, e := getDefaultTarget(targets)
+	cliTargets, e := getDefaultTarget(targets)
 	if e != nil {
 		return e
 	}
-	fmt.Println(targetName)
+	fmt.Println(cliTargets)
 
-	e = executeTarget(targets, dep_map[targetName])
+	e = executeTargetsConcurrently(targets, cliTargets, dep_map)
 	if e != nil {
 		return e
 	}
