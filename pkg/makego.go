@@ -4,19 +4,27 @@ import (
 	"flag"
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
-func sortDependencies(target Target, alltargets map[string]Target, visited map[string]bool) []string {
+func sortDependencies(target Target, alltargets map[string]Target, visited map[string]bool) ([]string, error) {
 	dep_list := []string{}
+	err := error(nil)
 	for _, dep := range target.Dependencies {
 		if visited[dep] {
 			continue
 		}
 		visited[dep] = true
-		dep_list = append(dep_list, sortDependencies(alltargets[dep], alltargets, visited)...)
+		_, ok := alltargets[dep]
+		if !ok {
+			err = fmt.Errorf("dependency '%s' not found", dep)
+		}
+		sorted_deps, _ := sortDependencies(alltargets[dep], alltargets, visited)
+
+		dep_list = append(dep_list, sorted_deps...)
 	}
 	dep_list = append(dep_list, target.Name)
-	return dep_list
+	return dep_list, err
 }
 
 func detectCycle(dep_list []string) bool {
@@ -34,15 +42,19 @@ func detectCycle(dep_list []string) bool {
 
 func getDependencies(targets map[string]Target) (map[string][]string, error) {
 	dependency_map := make(map[string][]string)
+	err := error(nil)
 	for tar_name, target := range targets {
 		visited := make(map[string]bool)
-		dep_list := sortDependencies(target, targets, visited)
+		dep_list, e := sortDependencies(target, targets, visited)
+		if e != nil {
+			err = e
+		}
 		if detectCycle(dep_list) {
-			return nil, fmt.Errorf("cycle detected in target %s", tar_name)
+			return nil, fmt.Errorf("cycle detected in target: %s", tar_name)
 		}
 		dependency_map[tar_name] = dep_list
 	}
-	return dependency_map, nil
+	return dependency_map, err
 }
 
 func getDefaultTarget(targets map[string]Target) (string, error) {
@@ -60,12 +72,13 @@ func getDefaultTarget(targets map[string]Target) (string, error) {
 
 func executeTarget(targets map[string]Target, dependencies []string) error {
 	for _, dep := range dependencies {
+
 		for _, command := range targets[dep].Commands {
 			fmt.Println(command)
 			cmd := exec.Command("sh", "-c", command)
 			err := cmd.Run()
 			if err != nil {
-				return err
+				return fmt.Errorf("error in command: '%s' in target: '%s' with message: %v", command,dep, err)
 			}
 		}
 	}
@@ -73,27 +86,32 @@ func executeTarget(targets map[string]Target, dependencies []string) error {
 }
 
 func Make() error {
-	targets, err := Parse()
-	if err != nil {
-		return err
+	err := error(nil)
+	targets, e := Parse()
+	if e != nil {
+		return e
 	}
 	fmt.Printf("%+v\n", targets)
 
-	dep_map, err := getDependencies(targets)
-	if err != nil {
-		return err
+	dep_map, e := getDependencies(targets)
+	// ignore errors of incorrect dependencies
+	if e != nil && !strings.HasPrefix(e.Error(), "dependency") {
+		return e
+	}
+	if e != nil && strings.HasPrefix(e.Error(), "dependency") {
+		err = e
 	}
 	fmt.Printf("%+v\n", dep_map)
 
-	targetName, err := getDefaultTarget(targets)
-	if err != nil {
-		return err
+	targetName, e := getDefaultTarget(targets)
+	if e != nil {
+		return e
 	}
 	fmt.Println(targetName)
 
-	err = executeTarget(targets, dep_map[targetName])
-	if err != nil {
-		return err
+	e = executeTarget(targets, dep_map[targetName])
+	if e != nil {
+		return e
 	}
-	return nil
+	return err
 }

@@ -1,4 +1,4 @@
-default: run
+default: run 
 run: dep1 dep2
 	echo "Hello World \n " > hello.txt
 

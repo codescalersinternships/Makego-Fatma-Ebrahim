@@ -102,7 +102,7 @@ func Parse() (map[string]Target, error) {
 			}
 			if !strings.HasPrefix(line, "\t") && !strings.Contains(line, ":") {
 				// fmt.Println("is error:", line)
-				return nil, fmt.Errorf("syntax error in line: %d", i+1)
+				return nil, fmt.Errorf("missing correct separator in line: %d", i+1)
 			}
 		}
 	}
