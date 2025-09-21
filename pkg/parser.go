@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"flag"
 )
 
 type Target struct {
@@ -13,7 +14,12 @@ type Target struct {
 }
 
 func getMakefile() (string, error) {
-	file, err := os.Open("Makefile")
+	var makefile string
+	flag.StringVar(&makefile, "f", "Makefile", "custom makefile path")
+	flag.Parse()
+
+	fmt.Println(makefile)
+	file, err := os.Open(makefile)
 	if err != nil {
 		return "", err
 	}
@@ -44,7 +50,6 @@ func targetArrayToMap(targets []Target) map[string]Target {
 	for _, target := range targets {
 		old_target, ok := target_map[target.Name]
 		if ok {
-
 			target_map[target.Name] = Target{
 				Name:         old_target.Name,
 				Dependencies: merge(old_target.Dependencies, target.Dependencies),
@@ -53,6 +58,10 @@ func targetArrayToMap(targets []Target) map[string]Target {
 		} else {
 			target_map[target.Name] = target
 		}
+	}
+	_, ok := target_map["default"]
+	if !ok {
+		target_map["default"] = targets[0]
 	}
 	return target_map
 }
