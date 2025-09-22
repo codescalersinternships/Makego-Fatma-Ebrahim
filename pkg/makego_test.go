@@ -25,7 +25,6 @@ func deleteMakefile(filename string) error {
 	os.Remove("clean")
 	os.Remove("hello.txt")
 	return os.Remove(filename)
-
 }
 
 func TestParser(t *testing.T) {
@@ -45,11 +44,15 @@ clean:
 		filename := "Makefile"
 		createMakefile(filename, makeExample)
 		_, err := parseFile(filename)
-		expected := "missing correct separator in line: 2"
+		if err == nil {
+			t.Errorf("expected error, got: no error")
+		}
 
+		expected := "missing correct separator in line: 2"
 		if err.Error() != expected {
 			t.Errorf("expected error: %v, got: %v", expected, err)
 		}
+
 		deleteMakefile(filename)
 	})
 
@@ -62,6 +65,10 @@ clean:
 		filename := "Makefile"
 		createMakefile(filename, makeExample)
 		targets, err := parseFile(filename)
+		if err != nil {
+			t.Errorf("expected no error, got: %v", err)
+		}
+
 		expected := map[string]Target{
 			"default": {
 				Name:         "default",
@@ -78,9 +85,6 @@ clean:
 				Dependencies: []string{},
 				Commands:     []string{"rm -rf hello.txt"},
 			},
-		}
-		if err != nil {
-			t.Errorf("expected no error, got: %v", err)
 		}
 
 		if len(targets) != 3 {
@@ -106,6 +110,10 @@ clean:
 		filename := "Makefile"
 		createMakefile(filename, makeExample)
 		targets, err := parseFile(filename)
+		if err != nil {
+			t.Errorf("expected no error, got: %v", err)
+		}
+
 		expected := map[string]Target{
 			"default": {
 				Name:         "default",
@@ -122,9 +130,6 @@ clean:
 				Dependencies: []string{},
 				Commands:     []string{"rm -rf hello.txt"},
 			},
-		}
-		if err != nil {
-			t.Errorf("expected no error, got: %v", err)
 		}
 
 		if len(targets) != 3 {
@@ -156,12 +161,19 @@ clean: run
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
+
 		cliTargets := []string{"default"}
+
 		err = makeHandler(cliTargets, targets)
+		if err == nil {
+			t.Errorf("expected error, got: no error")
+		}
+
 		expected := "circular dependency detected"
 		if err.Error() != expected {
 			t.Errorf("expected error: %v, got: %v", expected, err)
 		}
+
 		deleteMakefile(filename)
 	})
 
@@ -177,22 +189,30 @@ clean:
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
+
 		cliTargets := []string{"default"}
+
 		err = makeHandler(cliTargets, targets)
+		if err == nil {
+			t.Errorf("expected error, got: no error")
+		}
+
 		expected := "dependency 'notclean' not found"
 		if err.Error() != expected {
 			t.Errorf("expected error: %v, got: %v", expected, err)
 		}
 
 		bytes, err := os.ReadFile("hello.txt")
-		fileContent := string(bytes)
-		expectedFileContent := "Hello World\n"
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
+
+		fileContent := string(bytes)
+		expectedFileContent := "Hello World\n"
 		if fileContent != expectedFileContent {
 			t.Errorf("expected file content: %s, got: %s", expectedFileContent, fileContent)
 		}
+
 		deleteMakefile(filename)
 	})
 
@@ -208,21 +228,25 @@ clean:
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
+
 		cliTargets := []string{"run"}
+
 		err = makeHandler(cliTargets, targets)
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
 
 		bytes, err := os.ReadFile("hello.txt")
-		fileContent := string(bytes)
-		expectedFileContent := "Clean should appear first\nHello World\n"
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
+
+		fileContent := string(bytes)
+		expectedFileContent := "Clean should appear first\nHello World\n"
 		if fileContent != expectedFileContent {
 			t.Errorf("expected file content: %s, got: %s", expectedFileContent, fileContent)
 		}
+
 		deleteMakefile(filename)
 	})
 
@@ -238,21 +262,25 @@ clean:
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
+
 		cliTargets := []string{"run", "clean"}
+
 		err = makeHandler(cliTargets, targets)
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
 
 		bytes, err := os.ReadFile("hello.txt")
-		fileContent := string(bytes)
-		expectedFileContent := "Clean should appear first\nHello World\n"
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
+
+		fileContent := string(bytes)
+		expectedFileContent := "Clean should appear first\nHello World\n"
 		if fileContent != expectedFileContent {
 			t.Errorf("expected file content: %s, got: %s", expectedFileContent, fileContent)
 		}
+
 		deleteMakefile(filename)
 	})
 
@@ -268,30 +296,36 @@ clean:
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
+
 		cliTargets := []string{"run", "clean"}
+
 		err = makeHandler(cliTargets, targets)
 		if err != nil {
 			t.Errorf("expected no error, got: %v", err)
 		}
 
 		bytes, err := os.ReadFile("hello")
+		if err != nil {
+			t.Errorf("expected no error, got: %v", err)
+		}
+
 		fileContent := string(bytes)
 		expectedFileContent := "Hello World\n"
-		if err != nil {
-			t.Errorf("expected no error, got: %v", err)
-		}
 		if fileContent != expectedFileContent {
 			t.Errorf("expected file content: %s, got: %s", expectedFileContent, fileContent)
 		}
+
 		bytes, err = os.ReadFile("clean")
+		if err != nil {
+			t.Errorf("expected no error, got: %v", err)
+		}
+
 		fileContent = string(bytes)
 		expectedFileContent = "Hello World\n"
-		if err != nil {
-			t.Errorf("expected no error, got: %v", err)
-		}
 		if fileContent != expectedFileContent {
 			t.Errorf("expected file content: %s, got: %s", expectedFileContent, fileContent)
 		}
+
 		deleteMakefile(filename)
 	})
 
