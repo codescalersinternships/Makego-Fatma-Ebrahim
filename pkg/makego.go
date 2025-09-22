@@ -51,7 +51,7 @@ func getDependencies(targets map[string]Target) (map[string][]string, error) {
 			err = e
 		}
 		if detectCycle(dep_list) {
-			return nil, fmt.Errorf("cycle detected in target: %s", tar_name)
+			return nil, fmt.Errorf("circular dependency detected")
 		}
 		dependency_map[tar_name] = dep_list
 	}
@@ -109,13 +109,8 @@ func executeTargetsConcurrently(targets map[string]Target, cliTargets []string, 
 	return nil
 }
 
-func Make() error {
+func makeHandler(cliTargets []string, targets map[string]Target) error {
 	err := error(nil)
-	targets, e := Parse()
-	if e != nil {
-		return e
-	}
-	fmt.Printf("%+v\n", targets)
 
 	dep_map, e := getDependencies(targets)
 	// ignore errors of incorrect dependencies
@@ -125,17 +120,24 @@ func Make() error {
 	if e != nil && strings.HasPrefix(e.Error(), "dependency") {
 		err = e
 	}
-	fmt.Printf("%+v\n", dep_map)
-
-	cliTargets, e := getDefaultTarget(targets)
-	if e != nil {
-		return e
-	}
-	fmt.Println(cliTargets)
 
 	e = executeTargetsConcurrently(targets, cliTargets, dep_map)
 	if e != nil {
 		return e
 	}
 	return err
+}
+
+func Make() error {
+	targets, e := Parse()
+	if e != nil {
+		return e
+	}
+
+	cliTargets, e := getDefaultTarget(targets)
+	if e != nil {
+		return e
+	}
+
+	return makeHandler(cliTargets, targets)
 }

@@ -1,6 +1,6 @@
-default: run 
+default: run
 run: dep1 dep2
-	echo "Hello World \n " > hello.txt
+	echo "Hello World \n " > hello.txt   
 clean: 
 	rm -rf hello dep1.txt dep2.txt 
 dep1: 
@@ -8,4 +8,4 @@ dep1:
 dep2: dep1 
 	echo "Hello dep2 \n " > dep2.txt
 run: dep1 
-	echo "no \n " > hello
+	echo "no \n " > hello   

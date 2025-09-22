@@ -18,7 +18,6 @@ func getMakefile() (string, error) {
 	flag.StringVar(&makefile, "f", "Makefile", "custom makefile path")
 	flag.Parse()
 
-	fmt.Println(makefile)
 	file, err := os.Open(makefile)
 	if err != nil {
 		return "", err
@@ -61,16 +60,16 @@ func targetArrayToMap(targets []Target) map[string]Target {
 	}
 	_, ok := target_map["default"]
 	if !ok {
-		target_map["default"] = targets[0]
+		target_map["default"] = Target{
+			Name:         "default",
+			Dependencies: []string{targets[0].Name},
+			Commands:     []string{},
+		}
 	}
 	return target_map
 }
 
-func Parse() (map[string]Target, error) {
-	filename, err := getMakefile()
-	if err != nil {
-		return nil, err
-	}
+func parseFile(filename string) (map[string]Target, error) {
 	file, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -84,7 +83,7 @@ func Parse() (map[string]Target, error) {
 	for i, line := range lines {
 		if line != "" {
 			if !strings.HasPrefix(line, "\t") && strings.Contains(line, ":") {
-				// fmt.Println("is target:", line)
+				// target
 				targetDetected = true
 				targetName := strings.TrimSpace(line[:strings.Index(line, ":")])
 				dependencies := strings.TrimSpace(line[strings.Index(line, ":")+1:])
@@ -96,12 +95,11 @@ func Parse() (map[string]Target, error) {
 				continue
 			}
 			if strings.HasPrefix(line, "\t") && targetDetected {
-				// fmt.Println("is command:", line)
-				target.Commands = append(target.Commands, line[1:])
+				// command
+				target.Commands = append(target.Commands, strings.TrimSpace(line[1:]))
 				continue
 			}
 			if !strings.HasPrefix(line, "\t") && !strings.Contains(line, ":") {
-				// fmt.Println("is error:", line)
 				return nil, fmt.Errorf("missing correct separator in line: %d", i+1)
 			}
 		}
@@ -110,5 +108,13 @@ func Parse() (map[string]Target, error) {
 	targets = append(targets, target)
 	target_map := targetArrayToMap(targets)
 	return target_map, nil
+}
+
+func Parse() (map[string]Target, error) {
+	filename, err := getMakefile()
+	if err != nil {
+		return nil, err
+	}
+	return parseFile(filename)
 
 }
