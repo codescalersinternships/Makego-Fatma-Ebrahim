@@ -128,8 +128,12 @@ func makeHandler(cliTargets []string, targets map[string]Target) error {
 	return err
 }
 
+// Make is a function that parse a makefile specified by the command line flag -f 
+// or the makefile in the current directory 
+// then execute the targets specified by the command line arguments
+// or execute the default target
 func Make() error {
-	targets, e := Parse()
+	targets, e := parse()
 	if e != nil {
 		return e
 	}

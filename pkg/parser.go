@@ -110,7 +110,7 @@ func parseFile(filename string) (map[string]Target, error) {
 	return target_map, nil
 }
 
-func Parse() (map[string]Target, error) {
+func parse() (map[string]Target, error) {
 	filename, err := getMakefile()
 	if err != nil {
 		return nil, err
